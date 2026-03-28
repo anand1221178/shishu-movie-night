@@ -1,26 +1,240 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-peach: #F5DEB3;
+  --color-peach-light: #FFF8EE;
+  --color-peach-dark: #E8C896;
+  --color-navy: #1B2A4A;
+  --color-navy-light: #2D4470;
+  --color-crimson: #C0392B;
+  --color-crimson-light: #E74C3C;
+  --color-gold: #F39C12;
+  --color-gold-light: #FDEBD0;
+  --font-display: "Fredoka", sans-serif;
+  --font-body: "Nunito", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  background: var(--color-peach-light);
+  color: var(--color-navy);
+  overflow-x: hidden;
+}
+
+/* Utility: display font */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Smooth gradient backgrounds */
+.bg-gradient-peach {
+  background: linear-gradient(180deg, var(--color-peach-light) 0%, var(--color-peach) 100%);
+}
+
+/* Glowing card effect */
+.card-glow {
+  box-shadow:
+    0 4px 6px -1px rgba(27, 42, 74, 0.06),
+    0 10px 30px -5px rgba(27, 42, 74, 0.1);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.card-glow:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 8px 12px -2px rgba(27, 42, 74, 0.08),
+    0 20px 50px -10px rgba(27, 42, 74, 0.15);
+}
+
+/* Shimmer effect for the CTA button */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.btn-shimmer {
+  background-size: 200% auto;
+  background-image: linear-gradient(
+    90deg,
+    var(--color-crimson) 0%,
+    var(--color-crimson-light) 25%,
+    #ff6b5a 50%,
+    var(--color-crimson-light) 75%,
+    var(--color-crimson) 100%
+  );
+  animation: shimmer 3s linear infinite;
+}
+
+/* Pulse glow for the register CTA */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4); }
+  50% { box-shadow: 0 4px 30px rgba(192, 57, 43, 0.6), 0 0 60px rgba(192, 57, 43, 0.2); }
+}
+
+.btn-pulse {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-12px) rotate(3deg); }
+  66% { transform: translateY(-6px) rotate(-2deg); }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  50% { transform: translateY(-20px) rotate(8deg) scale(1.05); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes bounceIn {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatSlow 8s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.5s ease forwards;
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Star field background */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: white;
+  border-radius: 50%;
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+/* Input focus ring */
+.input-styled {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid var(--color-peach-dark);
+  border-radius: 14px;
+  background: var(--color-peach-light);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 16px; /* Prevents iOS zoom */
+  color: var(--color-navy);
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.input-styled::placeholder {
+  color: rgba(232, 200, 150, 0.8);
+  font-weight: 500;
+}
+
+.input-styled:focus {
+  border-color: var(--color-navy);
+  box-shadow: 0 0 0 4px rgba(27, 42, 74, 0.08);
+  background: white;
+}
+
+/* Ticket golden border */
+.ticket-golden {
+  position: relative;
+}
+
+.ticket-golden::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--color-gold), var(--color-peach-dark), var(--color-gold));
+  z-index: -1;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  .ticket-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 2px solid #ccc !important;
+  }
+
+  .ticket-card::before {
+    display: none !important;
+  }
+
+  .ticket-stub {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Confetti burst (for ticket reveal) */
+@keyframes confettiFall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  top: 0;
+  z-index: 100;
+  animation: confettiFall 3s ease-in forwards;
+  pointer-events: none;
 }
