@@ -1,24 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { RegistrationData } from "./RegistrationForm";
+import { useEffect, useRef, useState } from "react";
+import { RegistrationData, getAge, formatDob } from "./RegistrationForm";
 
 interface Props {
   data: RegistrationData;
 }
 
 function Confetti() {
-  const colors = ["#C0392B", "#F39C12", "#1B2A4A", "#E74C3C", "#F5DEB3", "#2D4470"];
-  const pieces = Array.from({ length: 40 }).map((_, i) => ({
-    id: i,
-    left: Math.random() * 100,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    delay: Math.random() * 1.5,
-    duration: 2 + Math.random() * 2,
-    size: 6 + Math.random() * 8,
-    rotation: Math.random() * 360,
-    shape: Math.random() > 0.5 ? "circle" : "square",
-  }));
+  const [pieces, setPieces] = useState<
+    { id: number; left: number; color: string; delay: number; duration: number; size: number; rotation: number; shape: string }[]
+  >([]);
+
+  useEffect(() => {
+    const colors = ["#C0392B", "#F39C12", "#1B2A4A", "#E74C3C", "#F5DEB3", "#2D4470"];
+    setPieces(
+      Array.from({ length: 40 }).map((_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        delay: Math.random() * 1.5,
+        duration: 2 + Math.random() * 2,
+        size: 6 + Math.random() * 8,
+        rotation: Math.random() * 360,
+        shape: Math.random() > 0.5 ? "circle" : "square",
+      }))
+    );
+  }, []);
 
   return (
     <>
@@ -44,11 +52,65 @@ function Confetti() {
 
 export default function TicketSection({ data }: Props) {
   const [showConfetti, setShowConfetti] = useState(true);
+  const [downloading, setDownloading] = useState(false);
+  const ticketRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 4000);
     return () => clearTimeout(timer);
   }, []);
+
+  const downloadPDF = async () => {
+    setDownloading(true);
+    try {
+      const html2canvas = (await import("html2canvas-pro")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const pdf = new jsPDF("landscape", "mm", "a5");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      for (let i = 0; i < ticketRefs.current.length; i++) {
+        const el = ticketRefs.current[i];
+        if (!el) continue;
+
+        if (i > 0) pdf.addPage();
+
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#FFFFFF",
+        });
+
+        const imgData = canvas.toDataURL("image/png");
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+
+        // Fit to page with padding
+        const padding = 8;
+        const availW = pageWidth - padding * 2;
+        const availH = pageHeight - padding * 2;
+        const ratio = Math.min(availW / imgWidth, availH / imgHeight);
+        const w = imgWidth * ratio;
+        const h = imgHeight * ratio;
+        const x = (pageWidth - w) / 2;
+        const y = (pageHeight - h) / 2;
+
+        pdf.addImage(imgData, "PNG", x, y, w, h);
+      }
+
+      const firstName = data.children[0]?.name.split(" ")[0] || "Family";
+      pdf.save(`Shishu-Movie-Night-Tickets-${firstName}.pdf`);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      alert("PDF download failed. Please try again or use a screenshot.");
+    }
+    setDownloading(false);
+  };
+
+  // Primary contact for ticket display
+  const contactName = data.mumName || data.dadName;
+  const contactPhone = data.mumPhone || data.dadPhone;
 
   return (
     <section className="min-h-screen py-12 px-5 bg-peach-light" id="ticketSection">
@@ -64,7 +126,7 @@ export default function TicketSection({ data }: Props) {
             You&apos;re All Set!
           </h2>
           <p className="text-navy-light/70 font-semibold text-sm max-w-sm mx-auto">
-            Here are your tickets. Print them out or screenshot them for the big night!
+            Download your tickets as a PDF and bring them along on the big night!
           </p>
         </div>
 
@@ -73,8 +135,8 @@ export default function TicketSection({ data }: Props) {
           {data.children.map((child, index) => (
             <div
               key={index}
-              className="ticket-card ticket-golden animate-fade-in-up"
-              style={{ animationDelay: `${0.3 + index * 0.2}s`, opacity: 0 }}
+              ref={(el) => { ticketRefs.current[index] = el; }}
+              className="ticket-card ticket-golden"
             >
               <div className="bg-white rounded-2xl overflow-hidden">
                 {/* Ticket top band */}
@@ -118,10 +180,13 @@ export default function TicketSection({ data }: Props) {
                     </div>
                     <div>
                       <div className="text-[0.6rem] font-extrabold text-crimson/70 tracking-[2px] uppercase mb-1">
-                        Age
+                        Date of Birth
                       </div>
                       <div className="font-display text-navy font-bold text-base sm:text-lg">
-                        {child.age} years old
+                        {child.dob ? formatDob(child.dob) : "—"}
+                      </div>
+                      <div className="text-navy/50 text-xs font-bold">
+                        {child.dob ? `${getAge(child.dob)} years old` : ""}
                       </div>
                     </div>
                     <div>
@@ -129,7 +194,7 @@ export default function TicketSection({ data }: Props) {
                         Guardian
                       </div>
                       <div className="font-bold text-navy text-sm">
-                        {data.parentName}
+                        {contactName}
                       </div>
                     </div>
                     <div>
@@ -137,7 +202,7 @@ export default function TicketSection({ data }: Props) {
                         Contact
                       </div>
                       <div className="font-bold text-navy text-sm">
-                        {data.parentPhone}
+                        {contactPhone}
                       </div>
                     </div>
                   </div>
@@ -148,6 +213,7 @@ export default function TicketSection({ data }: Props) {
                       { icon: "🚪", text: "Arrival 6PM" },
                       { icon: "🪄", text: "Magic 7PM" },
                       { icon: "🎬", text: "Movie 8PM" },
+                      { icon: "👕", text: "Cozy PJs!" },
                     ].map((item) => (
                       <span
                         key={item.text}
@@ -156,9 +222,6 @@ export default function TicketSection({ data }: Props) {
                         {item.icon} {item.text}
                       </span>
                     ))}
-                    <span className="inline-flex items-center gap-1.5 bg-peach-light px-3 py-1.5 rounded-full text-xs font-bold text-navy/70">
-                      👕 Cozy PJs!
-                    </span>
                   </div>
 
                   {/* Bottom bar */}
@@ -187,11 +250,22 @@ export default function TicketSection({ data }: Props) {
         {/* Action buttons */}
         <div className="no-print mt-10 space-y-3">
           <button
-            onClick={() => window.print()}
-            className="w-full py-4 bg-navy text-white rounded-2xl font-display font-bold text-base sm:text-lg hover:-translate-y-1 transition-all active:scale-[0.98] cursor-pointer"
+            onClick={downloadPDF}
+            disabled={downloading}
+            className="w-full py-4 bg-navy text-white rounded-2xl font-display font-bold text-base sm:text-lg hover:-translate-y-1 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             style={{ boxShadow: "0 6px 25px rgba(27,42,74,0.3)" }}
           >
-            🖨️ Print Tickets
+            {downloading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Generating PDF...
+              </span>
+            ) : (
+              "📥 Download Tickets as PDF"
+            )}
           </button>
           <button
             onClick={() => location.reload()}

@@ -4,15 +4,18 @@ import { useState } from "react";
 
 export interface ChildData {
   name: string;
-  age: string;
+  dob: string;
   allergies: string;
   medical: string;
 }
 
 export interface RegistrationData {
-  parentName: string;
-  parentPhone: string;
-  parentEmail: string;
+  mumName: string;
+  mumPhone: string;
+  mumEmail: string;
+  dadName: string;
+  dadPhone: string;
+  dadEmail: string;
   parentStaying: string;
   children: ChildData[];
   notes: string;
@@ -32,19 +35,36 @@ function generateId(): string {
   return id;
 }
 
+export function getAge(dob: string): number {
+  const birth = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+export function formatDob(dob: string): string {
+  const d = new Date(dob);
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
 export default function RegistrationForm({ onSubmit }: Props) {
-  const [parentName, setParentName] = useState("");
-  const [parentPhone, setParentPhone] = useState("");
-  const [parentEmail, setParentEmail] = useState("");
+  const [mumName, setMumName] = useState("");
+  const [mumPhone, setMumPhone] = useState("");
+  const [mumEmail, setMumEmail] = useState("");
+  const [dadName, setDadName] = useState("");
+  const [dadPhone, setDadPhone] = useState("");
+  const [dadEmail, setDadEmail] = useState("");
   const [parentStaying, setParentStaying] = useState("");
   const [notes, setNotes] = useState("");
   const [children, setChildren] = useState<ChildData[]>([
-    { name: "", age: "", allergies: "", medical: "" },
+    { name: "", dob: "", allergies: "", medical: "" },
   ]);
   const [submitting, setSubmitting] = useState(false);
 
   const addChild = () => {
-    setChildren([...children, { name: "", age: "", allergies: "", medical: "" }]);
+    setChildren([...children, { name: "", dob: "", allergies: "", medical: "" }]);
   };
 
   const removeChild = (index: number) => {
@@ -64,9 +84,12 @@ export default function RegistrationForm({ onSubmit }: Props) {
     setSubmitting(true);
 
     const data: RegistrationData = {
-      parentName,
-      parentPhone,
-      parentEmail,
+      mumName,
+      mumPhone,
+      mumEmail,
+      dadName,
+      dadPhone,
+      dadEmail,
       parentStaying,
       children,
       notes,
@@ -91,6 +114,8 @@ export default function RegistrationForm({ onSubmit }: Props) {
     setSubmitting(false);
   };
 
+  const labelCls = "block font-bold text-xs mb-2 text-navy/70 uppercase tracking-wider";
+
   return (
     <section className="no-print py-12 px-5 bg-gradient-peach" id="register">
       <div className="max-w-2xl mx-auto">
@@ -101,39 +126,39 @@ export default function RegistrationForm({ onSubmit }: Props) {
             Register Now
           </h2>
           <p className="text-navy-light/70 font-semibold text-sm">
-            Parents, fill in your details and add each child attending.
+            Fill in your family details and add each child attending.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* ====== PARENT CARD ====== */}
+          {/* ====== MUM'S DETAILS ====== */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 card-glow">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center text-xl">
-                👤
+              <div className="w-10 h-10 rounded-xl bg-crimson/5 flex items-center justify-center text-xl">
+                👩
               </div>
               <h3 className="font-display text-navy font-bold text-lg">
-                Parent / Guardian
+                Mum&apos;s Details
               </h3>
             </div>
 
             <div className="space-y-4">
+              <div>
+                <label className={labelCls}>
+                  Full Name <span className="text-crimson">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Mum's full name"
+                  className="input-styled"
+                  value={mumName}
+                  onChange={(e) => setMumName(e.target.value)}
+                />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold text-xs mb-2 text-navy/70 uppercase tracking-wider">
-                    Full Name <span className="text-crimson">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Your full name"
-                    className="input-styled"
-                    value={parentName}
-                    onChange={(e) => setParentName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-xs mb-2 text-navy/70 uppercase tracking-wider">
+                  <label className={labelCls}>
                     Phone <span className="text-crimson">*</span>
                   </label>
                   <input
@@ -141,65 +166,121 @@ export default function RegistrationForm({ onSubmit }: Props) {
                     required
                     placeholder="07123 456789"
                     className="input-styled"
-                    value={parentPhone}
-                    onChange={(e) => setParentPhone(e.target.value)}
+                    value={mumPhone}
+                    onChange={(e) => setMumPhone(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>
+                    Email <span className="text-crimson">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="mum@example.com"
+                    className="input-styled"
+                    value={mumEmail}
+                    onChange={(e) => setMumEmail(e.target.value)}
                   />
                 </div>
               </div>
+            </div>
+          </div>
 
+          {/* ====== DAD'S DETAILS ====== */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 card-glow">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center text-xl">
+                👨
+              </div>
+              <h3 className="font-display text-navy font-bold text-lg">
+                Dad&apos;s Details
+              </h3>
+            </div>
+
+            <div className="space-y-4">
               <div>
-                <label className="block font-bold text-xs mb-2 text-navy/70 uppercase tracking-wider">
-                  Email <span className="text-crimson">*</span>
+                <label className={labelCls}>
+                  Full Name <span className="text-crimson">*</span>
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  placeholder="your.email@example.com"
+                  placeholder="Dad's full name"
                   className="input-styled"
-                  value={parentEmail}
-                  onChange={(e) => setParentEmail(e.target.value)}
+                  value={dadName}
+                  onChange={(e) => setDadName(e.target.value)}
                 />
               </div>
-
-              <div>
-                <label className="block font-bold text-xs mb-3 text-navy/70 uppercase tracking-wider">
-                  Staying during the event? <span className="text-crimson">*</span>
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[
-                    { value: "Yes, staying", icon: "🙋", label: "Yes, I'll stay" },
-                    { value: "Drop off & pick up", icon: "🚗", label: "Drop off & pick up" },
-                  ].map((option) => (
-                    <label
-                      key={option.value}
-                      className={`flex items-center gap-3 cursor-pointer font-bold text-sm px-5 py-4 border-2 rounded-2xl transition-all active:scale-[0.98] ${
-                        parentStaying === option.value
-                          ? "border-navy bg-navy text-white shadow-lg shadow-navy/20"
-                          : "border-peach-dark bg-peach-light text-navy hover:border-navy/30"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="staying"
-                        value={option.value}
-                        required
-                        className="sr-only"
-                        checked={parentStaying === option.value}
-                        onChange={(e) => setParentStaying(e.target.value)}
-                      />
-                      <span className="text-xl">{option.icon}</span>
-                      {option.label}
-                    </label>
-                  ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>
+                    Phone <span className="text-crimson">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="07123 456789"
+                    className="input-styled"
+                    value={dadPhone}
+                    onChange={(e) => setDadPhone(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>
+                    Email <span className="text-crimson">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="dad@example.com"
+                    className="input-styled"
+                    value={dadEmail}
+                    onChange={(e) => setDadEmail(e.target.value)}
+                  />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* ====== STAYING QUESTION ====== */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 card-glow">
+            <label className={labelCls}>
+              Will a parent be staying during the event? <span className="text-crimson">*</span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+              {[
+                { value: "Yes, staying", icon: "🙋", label: "Yes, we'll stay" },
+                { value: "Drop off & pick up", icon: "🚗", label: "Drop off & pick up" },
+              ].map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex items-center gap-3 cursor-pointer font-bold text-sm px-5 py-4 border-2 rounded-2xl transition-all active:scale-[0.98] ${
+                    parentStaying === option.value
+                      ? "border-navy bg-navy text-white shadow-lg shadow-navy/20"
+                      : "border-peach-dark bg-peach-light text-navy hover:border-navy/30"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="staying"
+                    value={option.value}
+                    required
+                    className="sr-only"
+                    checked={parentStaying === option.value}
+                    onChange={(e) => setParentStaying(e.target.value)}
+                  />
+                  <span className="text-xl">{option.icon}</span>
+                  {option.label}
+                </label>
+              ))}
             </div>
           </div>
 
           {/* ====== CHILDREN CARD ====== */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 card-glow">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-crimson/5 flex items-center justify-center text-xl">
+              <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center text-xl">
                 🧒
               </div>
               <h3 className="font-display text-navy font-bold text-lg">
@@ -216,7 +297,6 @@ export default function RegistrationForm({ onSubmit }: Props) {
                   key={index}
                   className="relative bg-gradient-to-br from-peach-light to-peach/30 border-2 border-peach-dark/60 rounded-2xl p-5 transition-all"
                 >
-                  {/* Child number tag */}
                   <div className="flex justify-between items-center mb-4">
                     <span className="inline-flex items-center gap-2 font-display text-navy font-bold text-sm bg-white px-3 py-1.5 rounded-full shadow-sm">
                       <span className="w-5 h-5 rounded-full bg-crimson text-white text-xs flex items-center justify-center font-bold">
@@ -236,10 +316,10 @@ export default function RegistrationForm({ onSubmit }: Props) {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
                         <label className="block font-bold text-xs mb-1.5 text-navy/60 uppercase tracking-wider">
-                          Name <span className="text-crimson">*</span>
+                          Full Name <span className="text-crimson">*</span>
                         </label>
                         <input
                           type="text"
@@ -252,17 +332,14 @@ export default function RegistrationForm({ onSubmit }: Props) {
                       </div>
                       <div>
                         <label className="block font-bold text-xs mb-1.5 text-navy/60 uppercase tracking-wider">
-                          Age <span className="text-crimson">*</span>
+                          Date of Birth <span className="text-crimson">*</span>
                         </label>
                         <input
-                          type="number"
+                          type="date"
                           required
-                          min={1}
-                          max={17}
-                          placeholder="Age"
-                          className="input-styled text-center"
-                          value={child.age}
-                          onChange={(e) => updateChild(index, "age", e.target.value)}
+                          className="input-styled"
+                          value={child.dob}
+                          onChange={(e) => updateChild(index, "dob", e.target.value)}
                         />
                       </div>
                     </div>
@@ -307,9 +384,7 @@ export default function RegistrationForm({ onSubmit }: Props) {
           {/* ====== NOTES + SUBMIT ====== */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 card-glow">
             <div className="mb-6">
-              <label className="block font-bold text-xs mb-2 text-navy/70 uppercase tracking-wider">
-                Additional Notes
-              </label>
+              <label className={labelCls}>Additional Notes</label>
               <textarea
                 rows={3}
                 placeholder="Anything else you'd like us to know..."
