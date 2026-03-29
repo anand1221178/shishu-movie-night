@@ -173,12 +173,11 @@ export default function RegistrationForm({ onSubmit }: Props) {
                 </div>
                 <div>
                   <label className={labelCls}>
-                    Email <span className="text-crimson">*</span>
+                    Email
                   </label>
                   <input
                     type="email"
-                    required
-                    placeholder="mum@example.com"
+                    placeholder="mum@example.com (optional)"
                     className="input-styled"
                     value={mumEmail}
                     onChange={(e) => setMumEmail(e.target.value)}
@@ -229,12 +228,11 @@ export default function RegistrationForm({ onSubmit }: Props) {
                 </div>
                 <div>
                   <label className={labelCls}>
-                    Email <span className="text-crimson">*</span>
+                    Email
                   </label>
                   <input
                     type="email"
-                    required
-                    placeholder="dad@example.com"
+                    placeholder="dad@example.com (optional)"
                     className="input-styled"
                     value={dadEmail}
                     onChange={(e) => setDadEmail(e.target.value)}
