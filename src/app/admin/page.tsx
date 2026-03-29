@@ -13,34 +13,16 @@ interface Registration {
   age: number | string;
   guardianName: string;
   guardianPhone: string;
+  attended: boolean;
 }
 
 type FilterMode = "all" | "checked-in" | "not-yet";
 
-const CHECKIN_KEY = "smn-checkins";
 const AUTH_KEY = "smn-admin-auth";
 const ADMIN_PASSWORD =
   process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "shishu2026";
 const GOOGLE_SCRIPT_URL =
   process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_URL ?? "";
-
-/* ------------------------------------------------------------------ */
-/*  LocalStorage helpers for check-in state                            */
-/* ------------------------------------------------------------------ */
-
-function loadCheckedInIds(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(CHECKIN_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveCheckedInIds(data: Record<string, string>) {
-  localStorage.setItem(CHECKIN_KEY, JSON.stringify(data));
-}
 
 /* ------------------------------------------------------------------ */
 /*  Password gate                                                      */
@@ -110,17 +92,17 @@ function PasswordGate({ onAuth }: { onAuth: () => void }) {
 
 function CheckInCard({
   entry,
-  isCheckedIn,
+  updating,
   onToggle,
 }: {
   entry: Registration;
-  isCheckedIn: boolean;
+  updating: boolean;
   onToggle: () => void;
 }) {
   return (
     <div
       className={`rounded-2xl p-5 transition-all border-2 ${
-        isCheckedIn
+        entry.attended
           ? "bg-green-50 border-green-300"
           : "bg-white border-peach-dark/60"
       }`}
@@ -134,7 +116,7 @@ function CheckInCard({
             <h3 className="font-display font-bold text-navy text-base truncate">
               {entry.childName}
             </h3>
-            {isCheckedIn && (
+            {entry.attended && (
               <span className="shrink-0 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                 In
               </span>
@@ -168,13 +150,14 @@ function CheckInCard({
 
         <button
           onClick={onToggle}
-          className={`shrink-0 px-4 py-3 rounded-xl font-display font-bold text-sm transition-all active:scale-95 cursor-pointer ${
-            isCheckedIn
+          disabled={updating}
+          className={`shrink-0 px-4 py-3 rounded-xl font-display font-bold text-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${
+            entry.attended
               ? "bg-green-500/10 text-green-700 border-2 border-green-400 hover:bg-green-500/20"
               : "bg-navy text-white hover:-translate-y-0.5 shadow-lg shadow-navy/20"
           }`}
         >
-          {isCheckedIn ? "Undo" : "Check In"}
+          {updating ? "..." : entry.attended ? "Undo" : "Check In"}
         </button>
       </div>
     </div>
@@ -188,7 +171,7 @@ function CheckInCard({
 function ManualEntryForm({
   onAdd,
 }: {
-  onAdd: (entry: Registration) => void;
+  onAdd: (entry: { childName: string; gender: string; age: string; guardianName: string; guardianPhone: string }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [childName, setChildName] = useState("");
@@ -200,10 +183,9 @@ function ManualEntryForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAdd({
-      ticketId: `WALK-${Date.now().toString(36).toUpperCase()}`,
       childName: childName.trim(),
       gender,
-      age: age ? Number(age) : "?",
+      age: age || "?",
       guardianName: guardianName.trim(),
       guardianPhone: guardianPhone.trim(),
     });
@@ -334,11 +316,11 @@ function ManualEntryForm({
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
-  const [checkedInIds, setCheckedInIds] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterMode>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
 
   // Check session auth on mount
   useEffect(() => {
@@ -347,7 +329,7 @@ export default function AdminPage() {
     }
   }, []);
 
-  // Fetch registrations from Google Sheets
+  // Fetch registrations from Google Sheets (includes attended status)
   const fetchRegistrations = useCallback(async () => {
     if (!GOOGLE_SCRIPT_URL) {
       setError("Google Script URL not configured. Add NEXT_PUBLIC_GOOGLE_SCRIPT_URL to your environment variables.");
@@ -358,18 +340,19 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=getAll`);
+      const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=getAll&t=${Date.now()}`);
       const data = await res.json();
 
       if (data.status === "success" && Array.isArray(data.registrations)) {
         const regs: Registration[] = data.registrations.map(
-          (row: { ticketId: string; childName: string; gender: string; age: string | number; guardianName: string; guardianPhone: string }) => ({
+          (row: { ticketId: string; childName: string; gender: string; age: string | number; guardianName: string; guardianPhone: string; attended: boolean | string }) => ({
             ticketId: row.ticketId || "",
             childName: row.childName || "",
             gender: row.gender || "",
             age: row.age || "?",
             guardianName: row.guardianName || "",
             guardianPhone: row.guardianPhone || "",
+            attended: row.attended === true || row.attended === "YES",
           })
         );
         setRegistrations(regs);
@@ -385,51 +368,91 @@ export default function AdminPage() {
   // Load data when authed
   useEffect(() => {
     if (authed) {
-      setCheckedInIds(loadCheckedInIds());
       fetchRegistrations();
     }
   }, [authed, fetchRegistrations]);
 
-  // Toggle check-in
-  const toggleCheckIn = useCallback((ticketId: string) => {
-    setCheckedInIds((prev) => {
-      const next = { ...prev };
-      if (next[ticketId]) {
-        delete next[ticketId];
-      } else {
-        next[ticketId] = new Date().toISOString();
-      }
-      saveCheckedInIds(next);
-      return next;
-    });
-  }, []);
+  // Toggle check-in — updates Google Sheet so all devices see it
+  const toggleCheckIn = useCallback(async (ticketId: string) => {
+    const reg = registrations.find((r) => r.ticketId === ticketId);
+    if (!reg) return;
 
-  // Add walk-in (adds to local list + auto checks in)
-  const addWalkIn = useCallback((entry: Registration) => {
-    setRegistrations((prev) => [entry, ...prev]);
-    setCheckedInIds((prev) => {
-      const next = { ...prev, [entry.ticketId]: new Date().toISOString() };
-      saveCheckedInIds(next);
-      return next;
-    });
-  }, []);
+    const newStatus = !reg.attended;
 
-  // Clear all check-ins
-  const clearAll = useCallback(() => {
-    if (
-      window.confirm(
-        "Are you sure you want to clear ALL check-in data? This cannot be undone."
+    // Optimistic UI update
+    setRegistrations((prev) =>
+      prev.map((r) =>
+        r.ticketId === ticketId ? { ...r, attended: newStatus } : r
       )
-    ) {
-      setCheckedInIds({});
-      saveCheckedInIds({});
+    );
+
+    // Mark as updating
+    setUpdatingIds((prev) => new Set(prev).add(ticketId));
+
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "checkIn",
+          ticketId,
+          attended: newStatus,
+        }),
+      });
+    } catch {
+      // Revert on failure
+      setRegistrations((prev) =>
+        prev.map((r) =>
+          r.ticketId === ticketId ? { ...r, attended: !newStatus } : r
+        )
+      );
+    }
+
+    setUpdatingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(ticketId);
+      return next;
+    });
+  }, [registrations]);
+
+  // Add walk-in — writes to Google Sheet + marks attended
+  const addWalkIn = useCallback(async (entry: { childName: string; gender: string; age: string; guardianName: string; guardianPhone: string }) => {
+    const ticketId = `WALK-${Date.now().toString(36).toUpperCase()}`;
+
+    // Add to local state immediately
+    const newReg: Registration = {
+      ticketId,
+      childName: entry.childName,
+      gender: entry.gender,
+      age: entry.age,
+      guardianName: entry.guardianName,
+      guardianPhone: entry.guardianPhone,
+      attended: true,
+    };
+    setRegistrations((prev) => [newReg, ...prev]);
+
+    // Write to Google Sheet
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "walkIn",
+          ticketId,
+          ...entry,
+        }),
+      });
+    } catch {
+      console.warn("Failed to save walk-in to sheet.");
     }
   }, []);
 
   // Counts
   const checkedInCount = useMemo(
-    () => registrations.filter((r) => checkedInIds[r.ticketId]).length,
-    [registrations, checkedInIds]
+    () => registrations.filter((r) => r.attended).length,
+    [registrations]
   );
   const totalCount = registrations.length;
 
@@ -437,14 +460,12 @@ export default function AdminPage() {
   const filteredEntries = useMemo(() => {
     let entries = [...registrations];
 
-    // Filter
     if (filter === "checked-in") {
-      entries = entries.filter((r) => checkedInIds[r.ticketId]);
+      entries = entries.filter((r) => r.attended);
     } else if (filter === "not-yet") {
-      entries = entries.filter((r) => !checkedInIds[r.ticketId]);
+      entries = entries.filter((r) => !r.attended);
     }
 
-    // Search
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       entries = entries.filter(
@@ -456,7 +477,7 @@ export default function AdminPage() {
     }
 
     return entries;
-  }, [registrations, checkedInIds, filter, search]);
+  }, [registrations, filter, search]);
 
   /* ---- Password gate ---- */
   if (!authed) {
@@ -540,7 +561,7 @@ export default function AdminPage() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Loading registrations from Google Sheets...
+              Loading registrations...
             </div>
           </div>
         )}
@@ -565,7 +586,7 @@ export default function AdminPage() {
               <CheckInCard
                 key={entry.ticketId}
                 entry={entry}
-                isCheckedIn={!!checkedInIds[entry.ticketId]}
+                updating={updatingIds.has(entry.ticketId)}
                 onToggle={() => toggleCheckIn(entry.ticketId)}
               />
             ))}
@@ -595,22 +616,11 @@ export default function AdminPage() {
         {/* Refresh button */}
         <button
           onClick={fetchRegistrations}
-          className="w-full py-3 bg-white border-2 border-navy/15 rounded-xl font-display font-bold text-sm text-navy/70 hover:border-navy/30 transition-all active:scale-[0.97] cursor-pointer"
+          disabled={loading}
+          className="w-full py-3 bg-white border-2 border-navy/15 rounded-xl font-display font-bold text-sm text-navy/70 hover:border-navy/30 transition-all active:scale-[0.97] cursor-pointer disabled:opacity-50"
         >
-          🔄 Refresh Registrations
+          {loading ? "Loading..." : "🔄 Refresh from Google Sheets"}
         </button>
-
-        {/* Clear all */}
-        {checkedInCount > 0 && (
-          <div className="pb-8">
-            <button
-              onClick={clearAll}
-              className="w-full py-3 border-2 border-crimson/30 rounded-xl text-crimson/70 font-display font-bold text-sm hover:bg-crimson/5 transition-all active:scale-[0.97] cursor-pointer"
-            >
-              Clear All Check-Ins ({checkedInCount})
-            </button>
-          </div>
-        )}
       </main>
     </div>
   );
