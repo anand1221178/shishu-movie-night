@@ -6,39 +6,40 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-interface CheckInEntry {
+interface Registration {
   ticketId: string;
   childName: string;
   gender: string;
   age: number | string;
   guardianName: string;
   guardianPhone: string;
-  checkedInAt: string; // ISO string
 }
 
 type FilterMode = "all" | "checked-in" | "not-yet";
 
-const STORAGE_KEY = "smn-checkins";
+const CHECKIN_KEY = "smn-checkins";
 const AUTH_KEY = "smn-admin-auth";
 const ADMIN_PASSWORD =
   process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "shishu2026";
+const GOOGLE_SCRIPT_URL =
+  process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_URL ?? "";
 
 /* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
+/*  LocalStorage helpers for check-in state                            */
 /* ------------------------------------------------------------------ */
 
-function loadCheckins(): Record<string, CheckInEntry> {
+function loadCheckedInIds(): Record<string, string> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(CHECKIN_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
   }
 }
 
-function saveCheckins(data: Record<string, CheckInEntry>) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+function saveCheckedInIds(data: Record<string, string>) {
+  localStorage.setItem(CHECKIN_KEY, JSON.stringify(data));
 }
 
 /* ------------------------------------------------------------------ */
@@ -94,7 +95,7 @@ function PasswordGate({ onAuth }: { onAuth: () => void }) {
 
         <button
           type="submit"
-          className="w-full py-4 bg-navy text-white rounded-2xl font-display font-bold text-base transition-all active:scale-[0.97] hover:-translate-y-0.5"
+          className="w-full py-4 bg-navy text-white rounded-2xl font-display font-bold text-base transition-all active:scale-[0.97] hover:-translate-y-0.5 cursor-pointer"
         >
           Unlock
         </button>
@@ -112,14 +113,7 @@ function CheckInCard({
   isCheckedIn,
   onToggle,
 }: {
-  entry: {
-    ticketId: string;
-    childName: string;
-    gender: string;
-    age: number | string;
-    guardianName: string;
-    guardianPhone: string;
-  };
+  entry: Registration;
   isCheckedIn: boolean;
   onToggle: () => void;
 }) {
@@ -154,15 +148,17 @@ function CheckInCard({
             <p>
               Guardian: <span className="text-navy">{entry.guardianName}</span>
             </p>
-            <p>
-              Phone:{" "}
-              <a
-                href={`tel:${entry.guardianPhone}`}
-                className="text-navy underline"
-              >
-                {entry.guardianPhone}
-              </a>
-            </p>
+            {entry.guardianPhone && (
+              <p>
+                Phone:{" "}
+                <a
+                  href={`tel:${entry.guardianPhone}`}
+                  className="text-navy underline"
+                >
+                  {entry.guardianPhone}
+                </a>
+              </p>
+            )}
           </div>
 
           <p className="mt-2 font-mono text-xs text-navy/40 font-bold tracking-wider">
@@ -172,7 +168,7 @@ function CheckInCard({
 
         <button
           onClick={onToggle}
-          className={`shrink-0 px-4 py-3 rounded-xl font-display font-bold text-sm transition-all active:scale-95 ${
+          className={`shrink-0 px-4 py-3 rounded-xl font-display font-bold text-sm transition-all active:scale-95 cursor-pointer ${
             isCheckedIn
               ? "bg-green-500/10 text-green-700 border-2 border-green-400 hover:bg-green-500/20"
               : "bg-navy text-white hover:-translate-y-0.5 shadow-lg shadow-navy/20"
@@ -186,16 +182,15 @@ function CheckInCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Manual entry form                                                  */
+/*  Manual entry form (for walk-ins without pre-registration)          */
 /* ------------------------------------------------------------------ */
 
 function ManualEntryForm({
   onAdd,
 }: {
-  onAdd: (entry: CheckInEntry) => void;
+  onAdd: (entry: Registration) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [ticketId, setTicketId] = useState("");
   const [childName, setChildName] = useState("");
   const [gender, setGender] = useState<"Boy" | "Girl">("Boy");
   const [age, setAge] = useState("");
@@ -204,17 +199,14 @@ function ManualEntryForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const id = ticketId.trim() || `WALK-${Date.now().toString(36).toUpperCase()}`;
     onAdd({
-      ticketId: id,
+      ticketId: `WALK-${Date.now().toString(36).toUpperCase()}`,
       childName: childName.trim(),
       gender,
       age: age ? Number(age) : "?",
       guardianName: guardianName.trim(),
       guardianPhone: guardianPhone.trim(),
-      checkedInAt: new Date().toISOString(),
     });
-    setTicketId("");
     setChildName("");
     setGender("Boy");
     setAge("");
@@ -227,7 +219,7 @@ function ManualEntryForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-full py-4 border-2 border-dashed border-navy/20 rounded-2xl bg-transparent text-navy font-display font-bold text-sm hover:border-navy/40 hover:bg-peach-light/50 transition-all active:scale-[0.98]"
+        className="w-full py-4 border-2 border-dashed border-navy/20 rounded-2xl bg-transparent text-navy font-display font-bold text-sm hover:border-navy/40 hover:bg-peach-light/50 transition-all active:scale-[0.98] cursor-pointer"
       >
         + Add Walk-In / Manual Entry
       </button>
@@ -243,19 +235,8 @@ function ManualEntryForm({
       className="bg-white rounded-2xl p-5 border-2 border-gold/60 space-y-3"
     >
       <h4 className="font-display font-bold text-navy text-sm flex items-center gap-2">
-        <span className="text-lg">✏️</span> Manual Check-In
+        <span className="text-lg">✏️</span> Walk-In Check-In
       </h4>
-
-      <div>
-        <label className={labelCls}>Ticket ID (optional)</label>
-        <input
-          type="text"
-          placeholder="SMN-XXXXXX or leave blank"
-          className="input-styled"
-          value={ticketId}
-          onChange={(e) => setTicketId(e.target.value.toUpperCase())}
-        />
-      </div>
 
       <div>
         <label className={labelCls}>
@@ -280,7 +261,7 @@ function ManualEntryForm({
                 key={g}
                 type="button"
                 onClick={() => setGender(g)}
-                className={`py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                className={`py-2 rounded-xl text-sm font-bold border-2 transition-all cursor-pointer ${
                   gender === g
                     ? g === "Boy"
                       ? "border-blue-500 bg-blue-500 text-white"
@@ -330,14 +311,14 @@ function ManualEntryForm({
       <div className="flex gap-3 pt-1">
         <button
           type="submit"
-          className="flex-1 py-3 bg-navy text-white rounded-xl font-display font-bold text-sm transition-all active:scale-[0.97]"
+          className="flex-1 py-3 bg-navy text-white rounded-xl font-display font-bold text-sm transition-all active:scale-[0.97] cursor-pointer"
         >
           Check In
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="px-5 py-3 bg-peach-light border-2 border-peach-dark rounded-xl font-display font-bold text-sm text-navy transition-all active:scale-[0.97]"
+          className="px-5 py-3 bg-peach-light border-2 border-peach-dark rounded-xl font-display font-bold text-sm text-navy transition-all active:scale-[0.97] cursor-pointer"
         >
           Cancel
         </button>
@@ -352,9 +333,12 @@ function ManualEntryForm({
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
-  const [checkins, setCheckins] = useState<Record<string, CheckInEntry>>({});
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [checkedInIds, setCheckedInIds] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterMode>("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   // Check session auth on mount
   useEffect(() => {
@@ -363,93 +347,104 @@ export default function AdminPage() {
     }
   }, []);
 
-  // Load check-ins from localStorage
+  // Fetch registrations from Google Sheets
+  const fetchRegistrations = useCallback(async () => {
+    if (!GOOGLE_SCRIPT_URL) {
+      setError("Google Script URL not configured. Add NEXT_PUBLIC_GOOGLE_SCRIPT_URL to your environment variables.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=getAll`);
+      const data = await res.json();
+
+      if (data.status === "success" && Array.isArray(data.registrations)) {
+        const regs: Registration[] = data.registrations.map(
+          (row: { ticketId: string; childName: string; gender: string; age: string | number; guardianName: string; guardianPhone: string }) => ({
+            ticketId: row.ticketId || "",
+            childName: row.childName || "",
+            gender: row.gender || "",
+            age: row.age || "?",
+            guardianName: row.guardianName || "",
+            guardianPhone: row.guardianPhone || "",
+          })
+        );
+        setRegistrations(regs);
+      } else {
+        setError("Failed to load registrations. Check your Google Script.");
+      }
+    } catch {
+      setError("Could not connect to Google Sheets. Check your internet and script URL.");
+    }
+    setLoading(false);
+  }, []);
+
+  // Load data when authed
   useEffect(() => {
     if (authed) {
-      setCheckins(loadCheckins());
+      setCheckedInIds(loadCheckedInIds());
+      fetchRegistrations();
     }
-  }, [authed]);
+  }, [authed, fetchRegistrations]);
 
-  // Persist whenever checkins change
-  const updateCheckins = useCallback(
-    (next: Record<string, CheckInEntry>) => {
-      setCheckins(next);
-      saveCheckins(next);
-    },
-    []
-  );
-
-  const toggleCheckIn = useCallback(
-    (entry: {
-      ticketId: string;
-      childName: string;
-      gender: string;
-      age: number | string;
-      guardianName: string;
-      guardianPhone: string;
-    }) => {
-      setCheckins((prev) => {
-        const next = { ...prev };
-        if (next[entry.ticketId]) {
-          delete next[entry.ticketId];
-        } else {
-          next[entry.ticketId] = {
-            ...entry,
-            checkedInAt: new Date().toISOString(),
-          };
-        }
-        saveCheckins(next);
-        return next;
-      });
-    },
-    []
-  );
-
-  const addManualEntry = useCallback((entry: CheckInEntry) => {
-    setCheckins((prev) => {
-      const next = { ...prev, [entry.ticketId]: entry };
-      saveCheckins(next);
+  // Toggle check-in
+  const toggleCheckIn = useCallback((ticketId: string) => {
+    setCheckedInIds((prev) => {
+      const next = { ...prev };
+      if (next[ticketId]) {
+        delete next[ticketId];
+      } else {
+        next[ticketId] = new Date().toISOString();
+      }
+      saveCheckedInIds(next);
       return next;
     });
   }, []);
 
+  // Add walk-in (adds to local list + auto checks in)
+  const addWalkIn = useCallback((entry: Registration) => {
+    setRegistrations((prev) => [entry, ...prev]);
+    setCheckedInIds((prev) => {
+      const next = { ...prev, [entry.ticketId]: new Date().toISOString() };
+      saveCheckedInIds(next);
+      return next;
+    });
+  }, []);
+
+  // Clear all check-ins
   const clearAll = useCallback(() => {
     if (
       window.confirm(
         "Are you sure you want to clear ALL check-in data? This cannot be undone."
       )
     ) {
-      updateCheckins({});
+      setCheckedInIds({});
+      saveCheckedInIds({});
     }
-  }, [updateCheckins]);
+  }, []);
 
-  // All checked-in entries as a list
-  const checkedInList = useMemo(
-    () => Object.values(checkins),
-    [checkins]
+  // Counts
+  const checkedInCount = useMemo(
+    () => registrations.filter((r) => checkedInIds[r.ticketId]).length,
+    [registrations, checkedInIds]
   );
+  const totalCount = registrations.length;
 
-  const checkedInCount = checkedInList.length;
-
-  // For the search + filter to work, we need a combined list.
-  // Checked-in entries are stored; for "not yet" / "all", we only know
-  // about entries that have been checked in (since we don't have the
-  // full sheet). So "all" and "not yet" show checked-in entries, and
-  // the search/manual entry handles walk-ins.
-  //
-  // The search bar doubles as a quick-check-in: type a ticket ID and
-  // if it matches an existing check-in, show it; otherwise offer to
-  // create a new entry.
-
+  // Filter + search
   const filteredEntries = useMemo(() => {
-    let entries = checkedInList;
+    let entries = [...registrations];
 
-    // Sort by most recently checked in
-    entries = [...entries].sort(
-      (a, b) =>
-        new Date(b.checkedInAt).getTime() - new Date(a.checkedInAt).getTime()
-    );
+    // Filter
+    if (filter === "checked-in") {
+      entries = entries.filter((r) => checkedInIds[r.ticketId]);
+    } else if (filter === "not-yet") {
+      entries = entries.filter((r) => !checkedInIds[r.ticketId]);
+    }
 
+    // Search
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       entries = entries.filter(
@@ -461,7 +456,7 @@ export default function AdminPage() {
     }
 
     return entries;
-  }, [checkedInList, search]);
+  }, [registrations, checkedInIds, filter, search]);
 
   /* ---- Password gate ---- */
   if (!authed) {
@@ -479,7 +474,7 @@ export default function AdminPage() {
               <span className="text-xl">🎬</span> Check-In
             </h1>
             <div className="font-display font-bold text-sm bg-white/15 px-3 py-1.5 rounded-full">
-              {checkedInCount} checked in
+              {checkedInCount} / {totalCount} checked in
             </div>
           </div>
         </div>
@@ -488,21 +483,25 @@ export default function AdminPage() {
       <main className="max-w-lg mx-auto px-4 py-5 space-y-4">
         {/* Search */}
         <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/30 text-base pointer-events-none">
-            🔍
-          </span>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search ticket ID or child name..."
-            className="input-styled !pl-12"
+            placeholder="Search ticket ID, child or guardian name..."
+            className="input-styled"
+            style={{ paddingLeft: "44px" }}
             autoComplete="off"
           />
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/30 pointer-events-none" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </span>
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-navy/40 hover:text-navy text-lg font-bold w-8 h-8 flex items-center justify-center"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-navy/40 hover:text-navy text-lg font-bold w-8 h-8 flex items-center justify-center cursor-pointer"
               aria-label="Clear search"
             >
               &times;
@@ -514,15 +513,15 @@ export default function AdminPage() {
         <div className="flex gap-2">
           {(
             [
-              { key: "all", label: "All" },
-              { key: "checked-in", label: "Checked In" },
-              { key: "not-yet", label: "Not Yet" },
+              { key: "all", label: `All (${totalCount})` },
+              { key: "checked-in", label: `In (${checkedInCount})` },
+              { key: "not-yet", label: `Left (${totalCount - checkedInCount})` },
             ] as { key: FilterMode; label: string }[]
           ).map((tab) => (
             <button
               key={tab.key}
               onClick={() => setFilter(tab.key)}
-              className={`flex-1 py-2.5 rounded-xl font-display font-bold text-sm transition-all active:scale-[0.97] ${
+              className={`flex-1 py-2.5 rounded-xl font-display font-bold text-sm transition-all active:scale-[0.97] cursor-pointer ${
                 filter === tab.key
                   ? "bg-navy text-white shadow-md shadow-navy/20"
                   : "bg-white/70 text-navy/60 border border-peach-dark/40"
@@ -533,62 +532,80 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* Info banner */}
-        <div className="bg-gold-light border-2 border-gold/40 rounded-2xl p-4 text-sm text-navy/80 font-semibold">
-          <p>
-            <span className="text-base mr-1">💡</span>
-            Use <strong>+ Add Walk-In</strong> below to check in children.
-            Search above to find and undo check-ins. All data is stored
-            locally on this device.
-          </p>
-        </div>
+        {/* Loading state */}
+        {loading && (
+          <div className="bg-white rounded-2xl p-8 text-center">
+            <div className="flex items-center justify-center gap-2 text-navy/60 font-semibold text-sm">
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Loading registrations from Google Sheets...
+            </div>
+          </div>
+        )}
+
+        {/* Error state */}
+        {error && !loading && (
+          <div className="bg-crimson/5 border-2 border-crimson/20 rounded-2xl p-4 text-sm text-crimson font-semibold">
+            <p className="mb-3">{error}</p>
+            <button
+              onClick={fetchRegistrations}
+              className="bg-crimson text-white px-4 py-2 rounded-xl font-display font-bold text-xs cursor-pointer active:scale-95"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Results */}
-        <div className="space-y-3">
-          {filter !== "not-yet" &&
-            filteredEntries.map((entry) => (
+        {!loading && !error && (
+          <div className="space-y-3">
+            {filteredEntries.map((entry) => (
               <CheckInCard
                 key={entry.ticketId}
                 entry={entry}
-                isCheckedIn={!!checkins[entry.ticketId]}
-                onToggle={() => toggleCheckIn(entry)}
+                isCheckedIn={!!checkedInIds[entry.ticketId]}
+                onToggle={() => toggleCheckIn(entry.ticketId)}
               />
             ))}
 
-          {filter === "not-yet" && (
-            <div className="bg-white/60 rounded-2xl p-6 text-center text-navy/50 font-semibold text-sm">
-              <p className="text-2xl mb-2">📋</p>
-              <p>
-                &ldquo;Not Yet&rdquo; tracking requires the full registration
-                list. Use this view after importing data, or check the Google
-                Sheet directly.
-              </p>
-            </div>
-          )}
+            {filteredEntries.length === 0 && (
+              <div className="bg-white/60 rounded-2xl p-6 text-center text-navy/50 font-semibold text-sm">
+                <p className="text-2xl mb-2">
+                  {search ? "🔎" : filter === "checked-in" ? "✨" : filter === "not-yet" ? "🎉" : "📋"}
+                </p>
+                <p>
+                  {search
+                    ? "No matching registrations found."
+                    : filter === "checked-in"
+                    ? "No one checked in yet."
+                    : filter === "not-yet"
+                    ? "Everyone is checked in!"
+                    : "No registrations yet."}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
-          {filter !== "not-yet" && filteredEntries.length === 0 && (
-            <div className="bg-white/60 rounded-2xl p-6 text-center text-navy/50 font-semibold text-sm">
-              <p className="text-2xl mb-2">
-                {search ? "🔎" : "✨"}
-              </p>
-              <p>
-                {search
-                  ? "No matching check-ins found."
-                  : "No one checked in yet. Use the form below to start!"}
-              </p>
-            </div>
-          )}
-        </div>
+        {/* Manual entry for walk-ins */}
+        <ManualEntryForm onAdd={addWalkIn} />
 
-        {/* Manual entry */}
-        <ManualEntryForm onAdd={addManualEntry} />
+        {/* Refresh button */}
+        <button
+          onClick={fetchRegistrations}
+          className="w-full py-3 bg-white border-2 border-navy/15 rounded-xl font-display font-bold text-sm text-navy/70 hover:border-navy/30 transition-all active:scale-[0.97] cursor-pointer"
+        >
+          🔄 Refresh Registrations
+        </button>
 
-        {/* Footer actions */}
+        {/* Clear all */}
         {checkedInCount > 0 && (
-          <div className="pt-4 pb-8">
+          <div className="pb-8">
             <button
               onClick={clearAll}
-              className="w-full py-3 border-2 border-crimson/30 rounded-xl text-crimson/70 font-display font-bold text-sm hover:bg-crimson/5 transition-all active:scale-[0.97]"
+              className="w-full py-3 border-2 border-crimson/30 rounded-xl text-crimson/70 font-display font-bold text-sm hover:bg-crimson/5 transition-all active:scale-[0.97] cursor-pointer"
             >
               Clear All Check-Ins ({checkedInCount})
             </button>
