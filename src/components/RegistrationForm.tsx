@@ -5,6 +5,7 @@ import { useState } from "react";
 export interface ChildData {
   name: string;
   dob: string;
+  gender: "Boy" | "Girl" | "";
   allergies: string;
   medical: string;
 }
@@ -59,12 +60,12 @@ export default function RegistrationForm({ onSubmit }: Props) {
   const [parentStaying, setParentStaying] = useState("");
   const [notes, setNotes] = useState("");
   const [children, setChildren] = useState<ChildData[]>([
-    { name: "", dob: "", allergies: "", medical: "" },
+    { name: "", dob: "", gender: "", allergies: "", medical: "" },
   ]);
   const [submitting, setSubmitting] = useState(false);
 
   const addChild = () => {
-    setChildren([...children, { name: "", dob: "", allergies: "", medical: "" }]);
+    setChildren([...children, { name: "", dob: "", gender: "", allergies: "", medical: "" }]);
   };
 
   const removeChild = (index: number) => {
@@ -341,6 +342,36 @@ export default function RegistrationForm({ onSubmit }: Props) {
                           value={child.dob}
                           onChange={(e) => updateChild(index, "dob", e.target.value)}
                         />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block font-bold text-xs mb-1.5 text-navy/60 uppercase tracking-wider">
+                        Boy or Girl <span className="text-crimson">*</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { value: "Boy" as const, icon: "👦", color: "border-blue-400 bg-blue-50 text-blue-700", active: "border-blue-500 bg-blue-500 text-white shadow-lg shadow-blue-300/40" },
+                          { value: "Girl" as const, icon: "👧", color: "border-pink-300 bg-pink-50 text-pink-700", active: "border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-300/40" },
+                        ].map((option) => (
+                          <label
+                            key={option.value}
+                            className={`flex items-center justify-center gap-2 cursor-pointer font-bold text-sm px-4 py-3 border-2 rounded-2xl transition-all active:scale-[0.98] ${
+                              child.gender === option.value ? option.active : option.color
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name={`gender_${index}`}
+                              value={option.value}
+                              required
+                              className="sr-only"
+                              checked={child.gender === option.value}
+                              onChange={(e) => updateChild(index, "gender", e.target.value)}
+                            />
+                            <span className="text-lg">{option.icon}</span>
+                            {option.value}
+                          </label>
+                        ))}
                       </div>
                     </div>
                     <div>

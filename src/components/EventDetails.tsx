@@ -74,6 +74,19 @@ export default function EventDetails() {
           </div>
         </div>
 
+        {/* Location */}
+        <div className="bg-white rounded-2xl p-4 sm:p-5 card-glow flex items-center gap-3 mb-4">
+          <span className="text-2xl flex-shrink-0">📍</span>
+          <div>
+            <h3 className="font-display text-navy font-bold text-sm sm:text-base">
+              Location
+            </h3>
+            <p className="text-navy-light/70 text-xs sm:text-sm font-semibold">
+              4 Dexter Rd, Northriding, Randburg, 2188
+            </p>
+          </div>
+        </div>
+
         {/* Highlight cards */}
         <div className="grid grid-cols-2 gap-3">
           {highlights.map((item) => (

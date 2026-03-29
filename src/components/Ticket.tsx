@@ -132,15 +132,27 @@ export default function TicketSection({ data }: Props) {
 
         {/* Tickets */}
         <div className="space-y-8">
-          {data.children.map((child, index) => (
+          {data.children.map((child, index) => {
+            const isBoy = child.gender === "Boy";
+            const bandGradient = isBoy
+              ? "bg-gradient-to-r from-blue-800 via-blue-600 to-blue-800"
+              : "bg-gradient-to-r from-pink-700 via-pink-500 to-pink-700";
+            const accentColor = isBoy ? "text-blue-300" : "text-pink-300";
+            const pillBg = isBoy ? "bg-blue-50" : "bg-pink-50";
+            const borderColor = isBoy
+              ? "border-blue-200"
+              : "border-pink-200";
+            const ticketBg = isBoy ? "bg-blue-50/30" : "bg-pink-50/30";
+
+            return (
             <div
               key={index}
               ref={(el) => { ticketRefs.current[index] = el; }}
-              className="ticket-card ticket-golden"
+              className={`ticket-card ticket-golden`}
             >
-              <div className="bg-white rounded-2xl overflow-hidden">
+              <div className={`rounded-2xl overflow-hidden ${ticketBg}`} style={{ backgroundColor: isBoy ? "#f0f7ff" : "#fff0f5" }}>
                 {/* Ticket top band */}
-                <div className="bg-gradient-to-r from-navy via-navy-light to-navy px-6 py-4 flex items-center justify-between">
+                <div className={`${bandGradient} px-6 py-4 flex items-center justify-between`}>
                   <div>
                     <div className="font-display text-white font-bold text-lg sm:text-xl leading-tight">
                       Shishu Movie Night
@@ -160,10 +172,10 @@ export default function TicketSection({ data }: Props) {
                 </div>
 
                 {/* Perforated line */}
-                <div className="relative h-6 bg-peach-light/50">
+                <div className={`relative h-6 ${isBoy ? "bg-blue-50/80" : "bg-pink-50/80"}`}>
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-peach-light" />
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-6 h-6 rounded-full bg-peach-light" />
-                  <div className="absolute inset-x-4 top-1/2 border-t-2 border-dashed border-peach-dark" />
+                  <div className={`absolute inset-x-4 top-1/2 border-t-2 border-dashed ${borderColor}`} />
                 </div>
 
                 {/* Ticket body */}
@@ -171,7 +183,7 @@ export default function TicketSection({ data }: Props) {
                   {/* Main info */}
                   <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-5">
                     <div>
-                      <div className="text-[0.6rem] font-extrabold text-crimson/70 tracking-[2px] uppercase mb-1">
+                      <div className={`text-[0.6rem] font-extrabold tracking-[2px] uppercase mb-1 ${accentColor.replace("text-blue-300", "text-blue-500").replace("text-pink-300", "text-pink-500")}`}>
                         Child&apos;s Name
                       </div>
                       <div className="font-display text-navy font-bold text-base sm:text-lg">
@@ -179,7 +191,7 @@ export default function TicketSection({ data }: Props) {
                       </div>
                     </div>
                     <div>
-                      <div className="text-[0.6rem] font-extrabold text-crimson/70 tracking-[2px] uppercase mb-1">
+                      <div className={`text-[0.6rem] font-extrabold tracking-[2px] uppercase mb-1 ${isBoy ? "text-blue-500" : "text-pink-500"}`}>
                         Date of Birth
                       </div>
                       <div className="font-display text-navy font-bold text-base sm:text-lg">
@@ -190,7 +202,7 @@ export default function TicketSection({ data }: Props) {
                       </div>
                     </div>
                     <div>
-                      <div className="text-[0.6rem] font-extrabold text-crimson/70 tracking-[2px] uppercase mb-1">
+                      <div className={`text-[0.6rem] font-extrabold tracking-[2px] uppercase mb-1 ${isBoy ? "text-blue-500" : "text-pink-500"}`}>
                         Guardian
                       </div>
                       <div className="font-bold text-navy text-sm">
@@ -198,13 +210,21 @@ export default function TicketSection({ data }: Props) {
                       </div>
                     </div>
                     <div>
-                      <div className="text-[0.6rem] font-extrabold text-crimson/70 tracking-[2px] uppercase mb-1">
+                      <div className={`text-[0.6rem] font-extrabold tracking-[2px] uppercase mb-1 ${isBoy ? "text-blue-500" : "text-pink-500"}`}>
                         Contact
                       </div>
                       <div className="font-bold text-navy text-sm">
                         {contactPhone}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Location */}
+                  <div className={`flex items-center gap-2 ${pillBg} px-4 py-2.5 rounded-xl mb-4 ${borderColor} border`}>
+                    <span className="text-base">📍</span>
+                    <span className="text-xs font-bold text-navy/70">
+                      4 Dexter Rd, Northriding, Randburg, 2188
+                    </span>
                   </div>
 
                   {/* Schedule strip */}
@@ -217,7 +237,7 @@ export default function TicketSection({ data }: Props) {
                     ].map((item) => (
                       <span
                         key={item.text}
-                        className="inline-flex items-center gap-1.5 bg-peach-light px-3 py-1.5 rounded-full text-xs font-bold text-navy/70"
+                        className={`inline-flex items-center gap-1.5 ${pillBg} px-3 py-1.5 rounded-full text-xs font-bold text-navy/70`}
                       >
                         {item.icon} {item.text}
                       </span>
@@ -225,7 +245,7 @@ export default function TicketSection({ data }: Props) {
                   </div>
 
                   {/* Bottom bar */}
-                  <div className="flex items-center justify-between pt-4 border-t-2 border-dashed border-peach-dark">
+                  <div className={`flex items-center justify-between pt-4 border-t-2 border-dashed ${borderColor}`}>
                     <div>
                       <div className="text-[0.6rem] font-extrabold text-navy/30 tracking-[2px] uppercase">
                         Ticket ID
@@ -235,7 +255,7 @@ export default function TicketSection({ data }: Props) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-display text-crimson font-bold text-sm tracking-wide">
+                      <span className={`font-display font-bold text-sm tracking-wide ${isBoy ? "text-blue-600" : "text-pink-600"}`}>
                         ADMIT ONE
                       </span>
                       <span className="text-2xl">🍿</span>
@@ -244,7 +264,7 @@ export default function TicketSection({ data }: Props) {
                 </div>
               </div>
             </div>
-          ))}
+          );})}
         </div>
 
         {/* Action buttons */}
