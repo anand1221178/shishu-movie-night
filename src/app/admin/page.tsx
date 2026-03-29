@@ -488,15 +488,15 @@ export default function AdminPage() {
       <main className="max-w-lg mx-auto px-4 py-5 space-y-4">
         {/* Search */}
         <div className="relative">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/30 text-lg pointer-events-none">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/30 text-base pointer-events-none">
             🔍
-          </div>
+          </span>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search ticket ID or child name..."
-            className="input-styled pl-11"
+            className="input-styled !pl-12"
             autoComplete="off"
           />
           {search && (
