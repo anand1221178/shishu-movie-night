@@ -130,6 +130,23 @@ export default function TicketSection({ data }: Props) {
           </p>
         </div>
 
+        {/* Important reminder */}
+        <div className="no-print bg-gold/15 border-2 border-gold/40 rounded-2xl p-5 mb-8">
+          <div className="flex gap-3">
+            <span className="text-2xl flex-shrink-0">⚠️</span>
+            <div>
+              <h3 className="font-display text-navy font-bold text-base mb-1">
+                Important — Please Read!
+              </h3>
+              <ul className="text-navy/80 text-sm font-semibold space-y-1.5">
+                <li>🎟️ <strong>Bring your ticket</strong> — printed or on your phone. You will need it to check in at the door.</li>
+                <li>💰 <strong>R50 per child</strong> — payable at the door. This covers the movie, magic show and dinner.</li>
+                <li>👕 <strong>Dress code: Cozy Pyjamas!</strong></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         {/* Tickets */}
         <div className="space-y-8">
           {data.children.map((child, index) => {
@@ -254,7 +271,10 @@ export default function TicketSection({ data }: Props) {
                         {data.registrationId}-{index + 1}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
+                      <span className={`font-display font-bold text-xs tracking-wide ${isBoy ? "text-blue-400" : "text-pink-400"}`}>
+                        R50
+                      </span>
                       <span className={`font-display font-bold text-sm tracking-wide ${isBoy ? "text-blue-600" : "text-pink-600"}`}>
                         ADMIT ONE
                       </span>

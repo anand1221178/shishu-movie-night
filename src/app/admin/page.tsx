@@ -321,6 +321,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
+  const [lastSync, setLastSync] = useState<Date | null>(null);
 
   // Check session auth on mount
   useEffect(() => {
@@ -356,6 +357,7 @@ export default function AdminPage() {
           })
         );
         setRegistrations(regs);
+        setLastSync(new Date());
       } else {
         setError("Failed to load registrations. Check your Google Script.");
       }
@@ -365,11 +367,35 @@ export default function AdminPage() {
     setLoading(false);
   }, []);
 
-  // Load data when authed
+  // Load data when authed + auto-refresh every 10 seconds for multi-device sync
   useEffect(() => {
-    if (authed) {
-      fetchRegistrations();
-    }
+    if (!authed) return;
+    fetchRegistrations();
+    const interval = setInterval(() => {
+      // Silent background refresh (don't show loading spinner)
+      if (!GOOGLE_SCRIPT_URL) return;
+      fetch(`${GOOGLE_SCRIPT_URL}?action=getAll&t=${Date.now()}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.status === "success" && Array.isArray(data.registrations)) {
+            const regs: Registration[] = data.registrations.map(
+              (row: { ticketId: string; childName: string; gender: string; age: string | number; guardianName: string; guardianPhone: string; attended: boolean | string }) => ({
+                ticketId: row.ticketId || "",
+                childName: row.childName || "",
+                gender: row.gender || "",
+                age: row.age || "?",
+                guardianName: row.guardianName || "",
+                guardianPhone: row.guardianPhone || "",
+                attended: row.attended === true || row.attended === "YES",
+              })
+            );
+            setRegistrations(regs);
+            setLastSync(new Date());
+          }
+        })
+        .catch(() => {}); // Silent fail on background refresh
+    }, 10000);
+    return () => clearInterval(interval);
   }, [authed, fetchRegistrations]);
 
   // Toggle check-in — updates Google Sheet so all devices see it
@@ -490,13 +516,23 @@ export default function AdminPage() {
       {/* Sticky header */}
       <header className="sticky top-0 z-30 bg-navy text-white shadow-lg">
         <div className="max-w-lg mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
             <h1 className="font-display font-bold text-base flex items-center gap-2">
               <span className="text-xl">🎬</span> Check-In
             </h1>
             <div className="font-display font-bold text-sm bg-white/15 px-3 py-1.5 rounded-full">
-              {checkedInCount} / {totalCount} checked in
+              {checkedInCount} / {totalCount} in
             </div>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <div className="text-gold font-bold">
+              💰 R{checkedInCount * 50} collected ({checkedInCount} × R50)
+            </div>
+            {lastSync && (
+              <div className="text-white/40 font-semibold">
+                Synced {lastSync.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -613,14 +649,19 @@ export default function AdminPage() {
         {/* Manual entry for walk-ins */}
         <ManualEntryForm onAdd={addWalkIn} />
 
-        {/* Refresh button */}
-        <button
-          onClick={fetchRegistrations}
-          disabled={loading}
-          className="w-full py-3 bg-white border-2 border-navy/15 rounded-xl font-display font-bold text-sm text-navy/70 hover:border-navy/30 transition-all active:scale-[0.97] cursor-pointer disabled:opacity-50"
-        >
-          {loading ? "Loading..." : "🔄 Refresh from Google Sheets"}
-        </button>
+        {/* Sync info + manual refresh */}
+        <div className="text-center space-y-2">
+          <p className="text-navy/30 text-xs font-semibold">
+            Auto-syncs every 10 seconds across all devices
+          </p>
+          <button
+            onClick={fetchRegistrations}
+            disabled={loading}
+            className="w-full py-3 bg-white border-2 border-navy/15 rounded-xl font-display font-bold text-sm text-navy/70 hover:border-navy/30 transition-all active:scale-[0.97] cursor-pointer disabled:opacity-50"
+          >
+            {loading ? "Loading..." : "🔄 Refresh Now"}
+          </button>
+        </div>
       </main>
     </div>
   );

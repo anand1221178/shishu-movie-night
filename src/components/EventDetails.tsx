@@ -9,13 +9,13 @@ const schedule = [
 const highlights = [
   {
     icon: "🎟️",
-    title: "FREE Entry",
-    desc: "Movie & magic show entry is completely free!",
+    title: "R50 per child",
+    desc: "Includes movie, magic show and dinner!",
   },
   {
     icon: "🍕",
-    title: "Yummy Food",
-    desc: "Pizza, pasta and other goodies on sale",
+    title: "Extra Goodies",
+    desc: "Pizza, pasta and other treats on sale",
   },
   {
     icon: "👨‍👩‍👧‍👦",
@@ -74,6 +74,19 @@ export default function EventDetails() {
           </div>
         </div>
 
+        {/* Price banner */}
+        <div className="bg-gradient-to-r from-navy to-navy-light rounded-2xl p-5 mb-4 text-center card-glow">
+          <div className="font-display text-gold text-3xl sm:text-4xl font-bold mb-1">
+            R50
+          </div>
+          <p className="text-white/90 font-bold text-sm">
+            per child — includes movie, magic show &amp; dinner
+          </p>
+          <p className="text-white/50 font-semibold text-xs mt-1">
+            Payable at the door on the night
+          </p>
+        </div>
+
         {/* Location */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 card-glow flex items-center gap-3 mb-4">
           <span className="text-2xl flex-shrink-0">📍</span>
@@ -113,7 +126,7 @@ export default function EventDetails() {
             href="#register"
             className="inline-flex items-center gap-2 bg-crimson text-white font-display font-bold text-base sm:text-lg px-8 py-4 rounded-full btn-pulse hover:-translate-y-1 transition-transform active:scale-95"
           >
-            Register Now — It&apos;s Free!
+            Register Now — R50 per child
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
